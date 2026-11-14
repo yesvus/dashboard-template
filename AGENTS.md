@@ -9,3 +9,6 @@
 - Never commit secrets or mistake demo sign-in screens for production auth.
 - Never deploy, merge, modify production data or credentials without approval.
 - Add project-specific testing, API, deployment and security rules here.
+
+- Keep INSTALL_PROMPT.md aligned with actual package.json commands, safe
+  local-first onboarding, and this repository's demo-only auth boundaries.

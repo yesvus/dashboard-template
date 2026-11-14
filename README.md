@@ -11,13 +11,13 @@ without a backend. The optional Clerk demo is **not** production authentication.
 
 Copy and paste into your agent:
 
-~~~text
+```text
 Set up https://github.com/yesvus/dashboard-template locally.
 First read INSTALL_PROMPT.md and README.md. Verify Node.js 24+ and
 pnpm 10, use the checked-in lockfile, and run real project checks.
 Ask before installing software or changing system configuration.
 Do not configure production auth, secrets, or deployment automatically.
-~~~
+```
 
 [Full copyable install prompt](INSTALL_PROMPT.md).
 

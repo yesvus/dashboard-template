@@ -41,7 +41,7 @@ GitHub Actions runs these checks on pushes and pull requests.
 4. Configure client-side routing fallback for your deployment environment.
 5. Add project-specific tests, permissions and CI policies before production.
 
-Never put secrets in VITE_ environment variables: they are public in the
+Never put secrets in VITE\_ environment variables: they are public in the
 client-side bundle.
 
 ## Conventions and attribution

@@ -12,3 +12,7 @@
 
 - Keep INSTALL_PROMPT.md aligned with actual package.json commands, safe
   local-first onboarding, and this repository's demo-only auth boundaries.
+- For Cloudflare changes, run `pnpm run workers:check` after `pnpm build`;
+  the command is a credential-free dry run, NOT an actual deployment.
+- Keep Cloudflare beta versions pinned and update `pnpm-lock.yaml` together
+  with package.json; do not disable frozen-lockfile checks to hide drift.

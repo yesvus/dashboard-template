@@ -30,3 +30,18 @@ jobs:
           CF_SEND_TELEMETRY: 'false'
       - run: pnpm test:browser:install
       - run: pnpm test
+
+  shared-workers-canary:
+    name: reusable Workers contract pilot
+    if: github.event_name == 'pull_request'
+    # Temporary ref for cross-repo contract testing. Pin to a reviewed
+    # immutable commit after yesvus/.github PR #3 merges.
+    uses: yesvus/.github/.github/workflows/frontend-workers-checks.yml@feat/workers-frontend-ci
+    permissions:
+      contents: read
+    with:
+      node-version: '24'
+      pnpm-version: '10'
+      run-format: true
+      run-browser-tests: false
+      check-cloudflare: true

@@ -1,33 +1,48 @@
 # Cloudflare Workers Static Assets pilot
 
-Tracked in [dashboard-template #2](https://github.com/yesvus/dashboard-template/issues/2) and [ops #631](https://github.com/yesvus/ops/issues/631).
+Tracked by [dashboard-template #2](https://github.com/yesvus/dashboard-template/issues/2), [ops #631](https://github.com/yesvus/ops/issues/631), and [shared CI #2](https://github.com/yesvus/.github/issues/2).
 
-This is an **isolated, non-production deployment pilot**, not permission to change DNS, deploy on the account, wire real authentication or modify production assets.
+This template's Cloudflare target is a **separate, assets-only Worker**; none of the existing domain routes or Kubernetes workloads are changed. No cloud deployment, API token, or production cutover is implied by a successful local build.
 
-## Current baseline
+## Committed pilot configuration
 
-This is a Vite/React/TanStack Router UI template; it builds locally as a **client-side SPA** and has no trusted backend. Clerk is demo-only. Keep the existing Vite dev server, `pnpm lint`, `pnpm format:check`, `pnpm build` and Chromium-based tests.
+- `cloudflare.config.ts`: named `yesvus-dashboard-template-pilot`, compatibility date `2026-11-15`, `worker.assets.notFoundHandling: 'single-page-application'`.
+- `vite.config.ts`: official `@cloudflare/vite-plugin` v2 beta integration alongside the existing TanStack Router, React, Tailwind and Vitest config.
+- `package.json` and `pnpm-lock.yaml`: pinned `cf@1.0.0-beta.32` and `@cloudflare/vite-plugin@2.0.0-beta.v.17`; pnpm 10 lockfile regenerated in a temporary GitHub Actions job on the isolated branch.
+- `pnpm run workers:check`: `cf deploy --dry-run`, with **no account credentials or upload**. This checks the Cloudflare build output, not production behavior.
+- `.gitignore`: excludes local Cloudflare build output and development secret files.
 
-## Enable the Worker target (reviewable implementation checklist)
+Cloudflare `cf`/Vite plugin **v2 is beta**, so version updates require CI and a fresh compatibility check. Do not run implicit `cf init .` in CI; review generated changes in a separate PR.
 
-1. In an isolated checkout with Node 24 and pnpm 10, run Cloudflare's official `cf init .` interactively. **Review the generated patch before retaining it**. This currently adds `cf` and `@cloudflare/vite-plugin` to development dependencies, updates `vite.config.ts`, and generates `cloudflare.config.ts`.
-2. Commit **both** package.json and the regenerated pnpm lockfile; never bypass `pnpm install --frozen-lockfile`. Pin the beta tool versions as selected and confirm compatibility with Vite 8 and the TanStack Router plugin.
-3. Confirm the generated config uses a **new, uniquely named pilot Worker**, no production custom domain, a reviewed current `compatibilityDate` and SPA routing `worker.assets.notFoundHandling = 'single-page-application'`. The `cf` config uses camelCase and **does not** support `assets.directory`; Vite build output supplies assets.
-4. Ensure `cf build` and `cf deploy --dry-run` pass. Since `cf build` runs Vite directly, run `pnpm build` separately first to preserve the existing `tsc -b` check.
-5. Use the credential-free shared CI workflow from [yesvus/.github #2](https://github.com/yesvus/.github/issues/2). Do not enable `check-cloudflare` until the config + dependencies + lockfile are committed.
-6. After approved Cloudflare access is scoped to **this Worker**, publish a disposable trusted-branch preview and verify: `/`, deep-link reload (e.g. `/dashboard` if present), assets, MIME types, SPA error handling, cache headers, no accidental external API/auth requests, and preview deletion on close.
-7. Record preview URL and smoke results in the PR; add a documented version rollback and budget before any stable public domain is considered.
+## Local and CI validation
 
-Cloudflare docs:
-- [cf init in an existing project](https://developers.cloudflare.com/cf/get-started/first-worker/#start-from-an-existing-project)
-- [Config / SPA routing](https://developers.cloudflare.com/cf/projects/cloudflare-config/)
-- [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/)
-- [cf CI](https://developers.cloudflare.com/cf/ci/)
+```sh
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm format:check
+pnpm build
+CF_SEND_TELEMETRY=false pnpm run workers:check
+pnpm test:browser:install
+pnpm test
+```
 
-## Secret contract
+The ordinary `pnpm build` intentionally preserves the existing `tsc -b` check. Cloudflare `cf` invokes Vite directly and **does not execute** package.json's `build` script. Current CI checks the Cloudflare bundle without needing a token.
 
-The static UI requires **no runtime secrets**. `VITE_*` is publicly bundled and cannot hold private keys. Future signed requests must come from a server-side Worker using native runtime secrets; coordinate owner-entry/rotation with [ops #629](https://github.com/yesvus/ops/issues/629).
+## Non-production preview / deployment gate (not executed)
 
-## Outstanding before a ready-for-review deploy PR
+- Only after an explicit operator review, set up a restricted Cloudflare deploy identity scoped to the **pilot Worker**, not all zones.
+- Deploy only a trusted branch via Cloudflare native preview tooling. Do not allow untrusted/fork PR code to access deployment tokens.
+- Confirm `/`, an existing deep-link route with a hard refresh, JS/CSS/image responses, content types, no unexpected API/auth requests, and SPA fallback.
+- Add preview URL + smoke-test evidence to the PR, then delete the preview on branch close. Keep unique worker naming to avoid touching any existing service.
+- Review Cloudflare limits and observability, release promotion and reversible version rollback before considering a stable public domain.
 
-The exact `cf init .` output, compatible pinned dependency versions, regenerated lockfile, Worker dry-run, real preview URL and browser smoke checks **must be produced by CI/a trusted environment**. They are intentionally not fabricated in this preparatory patch.
+## Secrets
+
+No runtime secret is needed for this static demo. Every `VITE_*` variable is **public** and cannot hold a private credential. A future backend Worker can use Cloudflare-native runtime secrets supplied through an approved owner-mediated process; coordinate with [ops #629](https://github.com/yesvus/ops/issues/629).
+
+## References
+
+- [Cloudflare `cf` configuration](https://developers.cloudflare.com/cf/projects/cloudflare-config/)
+- [Vite plugin v2 beta](https://developers.cloudflare.com/workers/vite-plugin/v2-beta/)
+- [SPA routing](https://developers.cloudflare.com/workers/static-assets/routing/single-page-application/)
+- [Cloudflare CI](https://developers.cloudflare.com/cf/ci/)

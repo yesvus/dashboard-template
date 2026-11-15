@@ -66,3 +66,12 @@ Default issue and PR templates come from
 
 Derived from [Sat Naing's Shadcn Admin](https://github.com/satnaing/shadcn-admin).
 The original [MIT license](LICENSE) and copyright attribution are retained.
+
+## Cloudflare Workers Static Assets pilot
+
+A credential-free, **non-production** Cloudflare Workers pilot is specified in
+[docs/cloudflare-workers-pilot.md](docs/cloudflare-workers-pilot.md). The actual
+`cf` configuration, pinned dependencies/lockfile, preview creation and
+production approval have **not** been completed. Do not mistake this document
+for a deployed app. The first implementation follows
+[issue #2](https://github.com/yesvus/dashboard-template/issues/2).

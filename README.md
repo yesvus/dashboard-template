@@ -69,9 +69,12 @@ The original [MIT license](LICENSE) and copyright attribution are retained.
 
 ## Cloudflare Workers Static Assets pilot
 
-A credential-free, **non-production** Cloudflare Workers pilot is specified in
-[docs/cloudflare-workers-pilot.md](docs/cloudflare-workers-pilot.md). The actual
-`cf` configuration, pinned dependencies/lockfile, preview creation and
-production approval have **not** been completed. Do not mistake this document
-for a deployed app. The first implementation follows
-[issue #2](https://github.com/yesvus/dashboard-template/issues/2).
+The template now includes pinned Cloudflare CLI/Vite plugin dependencies and
+an **assets-only** pilot Worker configuration, with no production hostname or
+runtime secrets. Validate the Worker bundle locally without uploading anything:
+
+    pnpm run workers:check
+
+See [docs/cloudflare-workers-pilot.md](docs/cloudflare-workers-pilot.md) for
+the reviewed preview/deploy gates and rollback. **No Worker has been deployed
+and no production DNS has been changed.** Track the pilot in [issue #2](https://github.com/yesvus/dashboard-template/issues/2).

@@ -34,9 +34,9 @@ jobs:
   shared-workers-canary:
     name: reusable Workers contract pilot
     if: github.event_name == 'pull_request'
-    # Temporary ref for cross-repo contract testing. Pin to a reviewed
-    # immutable commit after yesvus/.github PR #3 merges.
-    uses: yesvus/.github/.github/workflows/frontend-workers-checks.yml@feat/workers-frontend-ci
+    # Immutable shared-workflow revision; update deliberately after
+    # yesvus/.github PR #3 merges.
+    uses: yesvus/.github/.github/workflows/frontend-workers-checks.yml@e7bca753c94dfc9f1ee559ed6d80521b920ade67
     permissions:
       contents: read
     with:

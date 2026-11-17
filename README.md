@@ -13,7 +13,7 @@ Copy and paste into your agent:
 
 ```text
 Set up https://github.com/yesvus/dashboard-template locally.
-First read INSTALL_PROMPT.md and README.md. Verify Node.js 24+ and
+First read INSTALL_PROMPT.md and README.md. Verify Node.js 24.22.1+ and
 pnpm 10, use the checked-in lockfile, and run real project checks.
 Ask before installing software or changing system configuration.
 Do not configure production auth, secrets, or deployment automatically.
@@ -28,7 +28,7 @@ Use the GitHub **Use this template** button, or run:
     gh repo create OWNER/NEW_REPO --public --template yesvus/dashboard-template --clone
     cd NEW_REPO
 
-Requirements: Node.js 24+ and pnpm 10.
+Requirements: Node.js 24.22.1+ and pnpm 10.
 
     pnpm install --frozen-lockfile
     pnpm dev
@@ -66,3 +66,15 @@ Default issue and PR templates come from
 
 Derived from [Sat Naing's Shadcn Admin](https://github.com/satnaing/shadcn-admin).
 The original [MIT license](LICENSE) and copyright attribution are retained.
+
+## Cloudflare Workers Static Assets pilot
+
+The template now includes pinned Cloudflare CLI/Vite plugin dependencies and
+an **assets-only** pilot Worker configuration, with no production hostname or
+runtime secrets. Validate the Worker bundle locally without uploading anything:
+
+    CF_SEND_TELEMETRY=false pnpm run workers:check
+
+See [docs/cloudflare-workers-pilot.md](docs/cloudflare-workers-pilot.md) for
+the reviewed preview/deploy gates and rollback. **No Worker has been deployed
+and no production DNS has been changed.** Track the pilot in [issue #2](https://github.com/yesvus/dashboard-template/issues/2).

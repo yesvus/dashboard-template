@@ -2,6 +2,7 @@
 import path from 'path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { playwright } from '@vitest/browser-playwright'
@@ -15,6 +16,7 @@ export default defineConfig({
     }),
     react(),
     tailwindcss(),
+    cloudflare(),
   ],
   resolve: {
     alias: {

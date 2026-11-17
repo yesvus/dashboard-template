@@ -33,7 +33,7 @@ jobs:
       - name: Validate isolated preview identity and requested action
         env:
           TOKEN_PRESENT: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-          ACCOUNT_PRESENT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+          ACCOUNT_PRESENT: ${{ vars.CLOUDFLARE_ACCOUNT_ID != '' }}
           OPERATION: ${{ inputs.operation }}
           PREVIEW_ID: ${{ inputs.preview_id }}
         run: |
@@ -78,7 +78,7 @@ jobs:
         if: inputs.operation == 'deploy'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           pnpm exec cf previews deploy --preview-name dashboard-static-canary > preview.json
@@ -125,7 +125,7 @@ jobs:
         if: failure() && inputs.operation == 'deploy' && steps.deploy.outputs.id != ''
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PREVIEW_ID: ${{ steps.deploy.outputs.id }}
         run: |
           set -euo pipefail
@@ -138,7 +138,7 @@ jobs:
         if: inputs.operation == 'delete'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           PREVIEW_ID: ${{ inputs.preview_id }}
         run: |
           set -euo pipefail

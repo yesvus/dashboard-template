@@ -117,7 +117,7 @@ jobs:
             rm -f "$hdr"
           done
           curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url/" -o /tmp/dashboard-preview.html
-          script=$(grep -Eo 'src="/assets/[^"]+\.js"' /tmp/dashboard-preview.html | head -1 | cut -d'"' -f2)
+          script=$(grep -Eo 'src="/assets/[^"]+\.js"' /tmp/dashboard-preview.html | head -1 | cut -d'"' -f2 || true)
           test -n "$script" || { echo 'No Vite module asset found' >&2; exit 1; }
           curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url$script" -o /dev/null
           echo 'Remote preview SPA deep-link and JS asset smoke checks passed' >> "$GITHUB_STEP_SUMMARY"

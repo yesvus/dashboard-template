@@ -117,6 +117,19 @@ jobs:
           test -n "$script" || { echo 'No Vite module asset found' >&2; exit 1; }
           curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url$script" -o /dev/null
           echo 'Remote preview SPA deep-link and JS asset smoke checks passed' >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove newly deployed preview when remote smoke fails
+        if: failure() && inputs.operation == 'deploy' && steps.deploy.outputs.id != ''
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PREVIEW_ID: ${{ steps.deploy.outputs.id }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --request DELETE \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/yesvus-dashboard-template-pilot/previews/$PREVIEW_ID" \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{if(!JSON.parse(s).success)process.exit(1)})"
+          echo 'Deleted failed-smoke preview; no production route touched' >> "$GITHUB_STEP_SUMMARY"
       - name: Delete only specified disposable preview
         if: inputs.operation == 'delete'
         env:

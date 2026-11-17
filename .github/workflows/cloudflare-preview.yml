@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   preview:
-    if: github.repository == 'yesvus/dashboard-template' && github.actor == 'yesvus' && github.ref == 'refs/heads/main'
+    if: github.repository == 'yesvus/dashboard-template' && github.actor == 'yesvus' && github.triggering_actor == 'yesvus' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: cloudflare-preview
@@ -32,13 +32,13 @@ jobs:
     steps:
       - name: Validate isolated preview identity and requested action
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TOKEN_PRESENT: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          ACCOUNT_PRESENT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
           OPERATION: ${{ inputs.operation }}
           PREVIEW_ID: ${{ inputs.preview_id }}
         run: |
           set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+          test "$TOKEN_PRESENT" = true && test "$ACCOUNT_PRESENT" = true || {
             echo 'Missing cloudflare-preview environment credentials; no deploy/delete attempted' >&2
             exit 1
           }
@@ -85,11 +85,15 @@ jobs:
           node --input-type=module <<'NODE'
           import fs from 'node:fs'
           const preview = JSON.parse(fs.readFileSync('preview.json', 'utf8'))
-          const urls = preview.preview_urls ?? []
-          const url = urls.find(x => /^https:\/\//.test(x) && new URL(x).hostname.endsWith('.workers.dev'))
-          if (!preview.preview_id || !url) throw new Error('Cloudflare preview response missing ID or workers.dev URL')
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + url + '\n')
+          // Record the ID before validating URL metadata, so failures can clean up this preview.
+          if (typeof preview.preview_id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(preview.preview_id)) {
+            throw new Error('Cloudflare preview response missing valid ID')
+          }
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'id=' + preview.preview_id + '\n')
+          const urls = Array.isArray(preview.preview_urls) ? preview.preview_urls : []
+          const url = urls.find(x => typeof x === 'string' && /^https:\/\//.test(x) && new URL(x).hostname.endsWith('.workers.dev'))
+          if (!url) throw new Error('Cloudflare preview response missing workers.dev URL')
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + url + '\n')
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
             '### Disposable Workers preview',
             '- URL: ' + url,

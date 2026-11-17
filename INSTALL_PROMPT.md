@@ -10,7 +10,7 @@ https://github.com/yesvus/dashboard-template
 Read README.md, AGENTS.md and INSTALL_PROMPT.md first. My goal is a
 working local Vite dashboard, not a deployed or authenticated service.
 
-1. Check that I have Node.js 24+ and pnpm 10. Inspect the actual package.json
+1. Check that I have Node.js 24.22.1+ and pnpm 10. Inspect the actual package.json
    and lockfile. Explain missing tools and ask before installing anything.
 2. Clone to a directory I choose; do not overwrite an existing checkout.
 3. Run pnpm install --frozen-lockfile and pnpm dev, using official documented

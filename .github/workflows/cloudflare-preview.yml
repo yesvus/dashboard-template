@@ -110,16 +110,19 @@ jobs:
         run: |
           set -euo pipefail
           url="${URL%/}"
+          # A freshly recreated preview name may briefly serve a 404 at an edge
+          # before propagation finishes. Retry boundedly; keep strict HTML/asset checks
+          # and cleanup the specific preview if readiness never succeeds.
           for path in / /sign-in; do
             hdr=$(mktemp)
-            curl --fail --silent --show-error --location --retry 2 --max-time 20 -D "$hdr" "$url$path" -o /dev/null
+            curl --fail --silent --show-error --location --retry-all-errors --retry 12 --retry-delay 3 --retry-max-time 90 --max-time 15 -D "$hdr" "$url$path" -o /dev/null
             grep -qi '^content-type: *text/html' "$hdr"
             rm -f "$hdr"
           done
-          curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url/" -o /tmp/dashboard-preview.html
+          curl --fail --silent --show-error --location --retry-all-errors --retry 12 --retry-delay 3 --retry-max-time 90 --max-time 15 "$url/" -o /tmp/dashboard-preview.html
           script=$(grep -Eo 'src="/assets/[^"]+\.js"' /tmp/dashboard-preview.html | head -1 | cut -d'"' -f2 || true)
           test -n "$script" || { echo 'No Vite module asset found' >&2; exit 1; }
-          curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url$script" -o /dev/null
+          curl --fail --silent --show-error --location --retry-all-errors --retry 12 --retry-delay 3 --retry-max-time 90 --max-time 15 "$url$script" -o /dev/null
           echo 'Remote preview SPA deep-link and JS asset smoke checks passed' >> "$GITHUB_STEP_SUMMARY"
       - name: Remove newly deployed preview when remote smoke fails
         if: failure() && inputs.operation == 'deploy' && steps.deploy.outputs.id != ''

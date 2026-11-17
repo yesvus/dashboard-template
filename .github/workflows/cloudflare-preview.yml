@@ -10,7 +10,7 @@ on:
         required: true
         options: [deploy, delete]
       preview_id:
-        description: Exact Cloudflare preview UUID for delete only (from prior deploy output)
+        description: Exact 32-character hex Cloudflare Preview ID for delete only (from prior deploy output)
         type: string
         required: false
 
@@ -43,8 +43,8 @@ jobs:
             exit 1
           }
           if [ "$OPERATION" = delete ]; then
-            [[ "$PREVIEW_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || {
-              echo 'Deletion requires the exact 36-character preview UUID' >&2
+            [[ "$PREVIEW_ID" =~ ^[0-9a-fA-F]{32}$ ]] || {
+              echo 'Deletion requires the exact 32-character hex Preview ID' >&2
               exit 1
             }
           fi
@@ -86,7 +86,7 @@ jobs:
           import fs from 'node:fs'
           const preview = JSON.parse(fs.readFileSync('preview.json', 'utf8'))
           // Record the ID before validating URL metadata, so failures can clean up this preview.
-          if (typeof preview.preview_id !== 'string' || !/^[0-9a-fA-F-]{36}$/.test(preview.preview_id)) {
+          if (typeof preview.preview_id !== 'string' || !/^[0-9a-fA-F]{32}$/.test(preview.preview_id)) {
             throw new Error('Cloudflare preview response missing valid ID')
           }
           fs.appendFileSync(process.env.GITHUB_OUTPUT, 'id=' + preview.preview_id + '\n')

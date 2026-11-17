@@ -19,7 +19,7 @@ jobs:
           version: 10
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '24'
+          node-version: '24.22.1'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -36,11 +36,11 @@ jobs:
     if: github.event_name == 'pull_request'
     # Immutable shared-workflow revision; update deliberately after
     # yesvus/.github PR #3 merges.
-    uses: yesvus/.github/.github/workflows/frontend-workers-checks.yml@e7bca753c94dfc9f1ee559ed6d80521b920ade67
+    uses: yesvus/.github/.github/workflows/frontend-workers-checks.yml@0c0a3aeee1b3a95d857b7d86c49aeb9724b93f99
     permissions:
       contents: read
     with:
-      node-version: '24'
+      node-version: '24.22.1'
       pnpm-version: '10'
       run-format: true
       run-browser-tests: false

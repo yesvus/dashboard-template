@@ -1,0 +1,128 @@
+# Manual, owner-only disposable Cloudflare preview. No production hostname or auto-deploy.
+name: Workers static preview (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy an isolated preview or delete its exact preview ID
+        type: choice
+        required: true
+        options: [deploy, delete]
+      preview_id:
+        description: Exact Cloudflare preview UUID for delete only (from prior deploy output)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dashboard-static-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: github.repository == 'yesvus/dashboard-template' && github.actor == 'yesvus' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: cloudflare-preview
+    env:
+      CF_SEND_TELEMETRY: 'false'
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Validate isolated preview identity and requested action
+        env:
+          OPERATION: ${{ inputs.operation }}
+          PREVIEW_ID: ${{ inputs.preview_id }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" && test -n "$CLOUDFLARE_ACCOUNT_ID" || {
+            echo 'Missing cloudflare-preview environment credentials; no deploy/delete attempted' >&2
+            exit 1
+          }
+          if [ "$OPERATION" = delete ]; then
+            [[ "$PREVIEW_ID" =~ ^[0-9a-fA-F-]{36}$ ]] || {
+              echo 'Deletion requires the exact 36-character preview UUID' >&2
+              exit 1
+            }
+          fi
+      - name: Checkout trusted main without write credentials
+        if: inputs.operation == 'deploy'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        if: inputs.operation == 'deploy'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: '10'
+          run_install: false
+      - name: Set up Node.js
+        if: inputs.operation == 'deploy'
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.22.1'
+          cache: pnpm
+      - name: Validate exact build
+        if: inputs.operation == 'deploy'
+        run: |
+          set -euo pipefail
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm format:check
+          pnpm build
+          pnpm run workers:check
+      - name: Deploy only named Workers Preview (never production)
+        if: inputs.operation == 'deploy'
+        run: |
+          set -euo pipefail
+          pnpm exec cf previews deploy --preview-name dashboard-static-canary > preview.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs'
+          const preview = JSON.parse(fs.readFileSync('preview.json', 'utf8'))
+          const urls = preview.preview_urls ?? []
+          const url = urls.find(x => /^https:\/\//.test(x) && new URL(x).hostname.endsWith('.workers.dev'))
+          if (!preview.preview_id || !url) throw new Error('Cloudflare preview response missing ID or workers.dev URL')
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'url=' + url + '\n')
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'id=' + preview.preview_id + '\n')
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+            '### Disposable Workers preview',
+            '- URL: ' + url,
+            '- Preview ID (needed for manual delete): `' + preview.preview_id + '`',
+            '- Commit: `' + process.env.GITHUB_SHA + '`',
+            '- No production route or custom domain configured.',
+          ].join('\n') + '\n')
+          NODE
+        id: deploy
+      - name: Smoke-test actual preview root, deep-link and asset
+        if: inputs.operation == 'deploy'
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          url="${URL%/}"
+          for path in / /sign-in; do
+            hdr=$(mktemp)
+            curl --fail --silent --show-error --location --retry 2 --max-time 20 -D "$hdr" "$url$path" -o /dev/null
+            grep -qi '^content-type: *text/html' "$hdr"
+            rm -f "$hdr"
+          done
+          curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url/" -o /tmp/dashboard-preview.html
+          script=$(grep -Eo 'src="/assets/[^"]+\.js"' /tmp/dashboard-preview.html | head -1 | cut -d'"' -f2)
+          test -n "$script" || { echo 'No Vite module asset found' >&2; exit 1; }
+          curl --fail --silent --show-error --location --retry 2 --max-time 20 "$url$script" -o /dev/null
+          echo 'Remote preview SPA deep-link and JS asset smoke checks passed' >> "$GITHUB_STEP_SUMMARY"
+      - name: Delete only specified disposable preview
+        if: inputs.operation == 'delete'
+        env:
+          PREVIEW_ID: ${{ inputs.preview_id }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --request DELETE \
+            --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            --header 'Content-Type: application/json' \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/workers/yesvus-dashboard-template-pilot/previews/$PREVIEW_ID" \
+            | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{if(!JSON.parse(s).success)process.exit(1)})"
+          printf 'Deleted disposable Cloudflare preview ID %s (worker: yesvus-dashboard-template-pilot)\n' "$PREVIEW_ID" >> "$GITHUB_STEP_SUMMARY"
